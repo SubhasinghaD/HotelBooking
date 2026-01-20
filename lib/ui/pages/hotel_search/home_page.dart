@@ -46,7 +46,21 @@ class _HotelSearchPageState extends State<HotelSearchPage> {
           ),
         ),
       ),
-      body: HotelListBody(hotelBloc: hotelBloc, filteredHotels: hotels),
+      body: Column(
+        children: [
+          SizedBox(
+            height: 180,
+            width: double.infinity,
+            child: Image.asset(
+              'assets/img/home.jpg',
+              fit: BoxFit.cover,
+            ),
+          ),
+          Expanded(
+            child: HotelListBody(hotelBloc: hotelBloc, filteredHotels: hotels),
+          ),
+        ],
+      ),
     );
   }
 }

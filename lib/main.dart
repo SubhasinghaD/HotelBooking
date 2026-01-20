@@ -24,7 +24,9 @@ Future<void> main() async {
   }
   
   // Initialize Stripe
-  if (AppConfig.enablePayments && AppConfig.stripePublishableKey.isNotEmpty) {
+  if (!kIsWeb &&
+      AppConfig.enablePayments &&
+      AppConfig.stripePublishableKey.isNotEmpty) {
     Stripe.publishableKey = AppConfig.stripePublishableKey;
   }
   

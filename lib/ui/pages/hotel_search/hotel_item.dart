@@ -28,10 +28,9 @@ class HotelItem extends StatelessWidget {
                   borderRadius: BorderRadius.circular(8.0),
                   child: Image.network(
                     hotel.imageUrl,
-                    errorBuilder: (context, error, stackTrace) => Container(
-                      color: Colors.grey.shade300,
-                      alignment: Alignment.center,
-                      child: Icon(Icons.broken_image, color: Colors.grey),
+                    errorBuilder: (context, error, stackTrace) => Image.asset(
+                      'assets/img/hotel1.jpg',
+                      fit: BoxFit.cover,
                     ),
                   ),
                 ),

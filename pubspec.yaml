@@ -41,4 +41,6 @@ flutter:
 
   assets:
     - assets/img/logo.png
+    - assets/img/home.jpg
+    - assets/img/hotel1.jpg
     - server/hotels.json

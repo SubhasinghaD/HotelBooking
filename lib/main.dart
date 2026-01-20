@@ -75,7 +75,10 @@ class MyApp extends StatelessWidget {
       ),
       home: MultiProvider(
         providers: [
-          ChangeNotifierProvider(create: (_) => HotelBloc()..retrieveHotels()),
+          ChangeNotifierProvider(
+            create: (_) => HotelBloc(firebaseReady: firebaseReady)
+              ..retrieveHotels(),
+          ),
           ChangeNotifierProvider(create: (_) => FavoritesBloc()),
           ChangeNotifierProvider(create: (_) => BookingBloc()),
           ChangeNotifierProvider(create: (_) => AuthBloc(firebaseReady: firebaseReady)),

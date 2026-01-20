@@ -1,4 +1,5 @@
 import 'package:buscatelo/bloc/auth_bloc.dart';
+import 'package:buscatelo/ui/pages/admin/admin_shell.dart';
 import 'package:buscatelo/ui/pages/auth/login_page.dart';
 import 'package:buscatelo/ui/pages/hotel_search/home_page.dart';
 import 'package:buscatelo/ui/pages/profile/profile_page.dart';
@@ -27,6 +28,14 @@ class _HomeShellState extends State<HomeShell> {
     final authBloc = context.watch<AuthBloc>();
     if (!authBloc.signedIn) {
       return const LoginPage();
+    }
+    if (authBloc.roleLoading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+    if (authBloc.isAdmin) {
+      return const AdminShell();
     }
     return Scaffold(
       body: IndexedStack(index: _index, children: _pages),

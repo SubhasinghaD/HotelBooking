@@ -16,6 +16,7 @@ class _LoginPageState extends State<LoginPage> {
   final _nameController = TextEditingController();
   bool _isSignup = false;
   bool _obscurePassword = true;
+  String _selectedRole = 'client';
 
   @override
   void dispose() {
@@ -89,6 +90,28 @@ class _LoginPageState extends State<LoginPage> {
                     key: _formKey,
                     child: Column(
                       children: [
+                        Row(
+                          children: [
+                            const Text('Login as:'),
+                            const SizedBox(width: 12),
+                            ChoiceChip(
+                              label: const Text('Client'),
+                              selected: _selectedRole == 'client',
+                              onSelected: (_) => setState(() {
+                                _selectedRole = 'client';
+                              }),
+                            ),
+                            const SizedBox(width: 8),
+                            ChoiceChip(
+                              label: const Text('Admin'),
+                              selected: _selectedRole == 'admin',
+                              onSelected: (_) => setState(() {
+                                _selectedRole = 'admin';
+                              }),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
                         if (_isSignup)
                           TextFormField(
                             controller: _nameController,
@@ -145,11 +168,13 @@ class _LoginPageState extends State<LoginPage> {
                                 name: _nameController.text.trim(),
                                 email: _emailController.text.trim(),
                                 password: _passwordController.text.trim(),
+                                role: _selectedRole,
                               );
                             } else {
                               await authBloc.signInWithEmailPassword(
                                 email: _emailController.text.trim(),
                                 password: _passwordController.text.trim(),
+                                expectedRole: _selectedRole,
                               );
                             }
                           }
@@ -170,7 +195,9 @@ class _LoginPageState extends State<LoginPage> {
                     icon: const Icon(Icons.login),
                     label: const Text('Continue with Google'),
                     onPressed: authBloc.firebaseReady
-                        ? () => authBloc.signInWithGoogle()
+                        ? () => authBloc.signInWithGoogle(
+                              expectedRole: _selectedRole,
+                            )
                         : null,
                   ),
                   const SizedBox(height: 12),

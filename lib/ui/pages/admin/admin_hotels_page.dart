@@ -3,12 +3,19 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:buscatelo/app/app_config.dart';
 import 'dart:typed_data';
 import 'dart:async';
 
 class AdminHotelsPage extends StatelessWidget {
   const AdminHotelsPage({Key? key}) : super(key: key);
+
+  String _resolveStorageBucket() {
+    final bucket = Firebase.app().options.storageBucket;
+    if (bucket != null && bucket.isNotEmpty) return bucket;
+    return AppConfig.firebaseWebStorageBucket;
+  }
 
   Future<void> _showHotelDialog(BuildContext context,
       {HotelModel? hotel, String? docId}) async {
@@ -186,39 +193,49 @@ class AdminHotelsPage extends StatelessWidget {
                   final latitude = double.tryParse(latitudeController.text.trim());
                   final longitude = double.tryParse(longitudeController.text.trim());
 
-                  String uploadedImageUrl = selectedImageUrl ?? '';
-                  
-                  // Upload image to Firebase Storage if new image selected
-                  if (selectedImageBytes != null) {
-                    try {
-                      final storageRef = FirebaseStorage.instanceFor(
-                        bucket: AppConfig.firebaseWebStorageBucket,
-                      )
-                          .ref()
-                          .child('hotels')
-                          .child('${DateTime.now().millisecondsSinceEpoch}.jpg');
+                  if (selectedImageBytes == null) {
+                    navigator.pop();
+                    scaffoldMessenger.showSnackBar(
+                      const SnackBar(content: Text('Please select an image.')),
+                    );
+                    return;
+                  }
 
-                      final uploadTask = storageRef.putData(
-                        selectedImageBytes!,
-                        SettableMetadata(contentType: 'image/jpeg'),
-                      );
+                  String uploadedImageUrl = '';
+                  try {
+                    final bucket = _resolveStorageBucket();
+                    debugPrint('Using storage bucket: $bucket');
+                    debugPrint('Starting hotel image upload...');
+                    final storageRef = FirebaseStorage.instanceFor(
+                      bucket: bucket,
+                    )
+                        .ref()
+                        .child('hotels')
+                        .child('${DateTime.now().millisecondsSinceEpoch}.jpg');
 
-                      final snapshot = await uploadTask
-                          .timeout(const Duration(seconds: 20));
-                      uploadedImageUrl = await snapshot.ref.getDownloadURL();
-                    } on TimeoutException {
-                      uploadedImageUrl = '';
-                      scaffoldMessenger.showSnackBar(
-                        const SnackBar(
-                          content: Text('Image upload timed out. Saving without image.'),
-                        ),
+                    final uploadTask = storageRef.putData(
+                      selectedImageBytes!,
+                      SettableMetadata(contentType: 'image/jpeg'),
+                    );
+
+                    uploadTask.snapshotEvents.listen((snapshot) {
+                      debugPrint(
+                        'Hotel upload: ${snapshot.bytesTransferred}/${snapshot.totalBytes} bytes',
                       );
-                    } catch (uploadError) {
-                      uploadedImageUrl = '';
-                      scaffoldMessenger.showSnackBar(
-                        SnackBar(content: Text('Image upload failed: $uploadError')),
-                      );
-                    }
+                    }, onError: (error) {
+                      debugPrint('Hotel upload error: $error');
+                    });
+
+                    final snapshot = await uploadTask;
+                    uploadedImageUrl = await snapshot.ref.getDownloadURL();
+                    debugPrint('Hotel image uploaded. URL: $uploadedImageUrl');
+                  } catch (uploadError) {
+                    navigator.pop();
+                    debugPrint('Hotel image upload failed: $uploadError');
+                    scaffoldMessenger.showSnackBar(
+                      SnackBar(content: Text('Image upload failed: $uploadError')),
+                    );
+                    return;
                   }
 
                   print('Saving hotel to Firestore...');
@@ -234,9 +251,11 @@ class AdminHotelsPage extends StatelessWidget {
                     rooms: rooms,
                   );
 
+                  debugPrint('Saving hotel to Firestore...');
                   final hotelsRef = FirebaseFirestore.instance.collection('hotels');
                   final id = docId ?? hotelsRef.doc().id;
                   await hotelsRef.doc(id).set(updated.toJson());
+                  debugPrint('Hotel saved successfully.');
                   print('Hotel saved successfully!');
                   
                   // Close loading dialog
@@ -370,9 +389,11 @@ class AdminHotelsPage extends StatelessWidget {
                 // Upload room image to Firebase Storage if selected
                 if (selectedImageBytes != null) {
                   try {
+                    final bucket = _resolveStorageBucket();
+                    debugPrint('Using storage bucket: $bucket');
                     print('Starting room image upload...');
                     final storageRef = FirebaseStorage.instanceFor(
-                      bucket: AppConfig.firebaseWebStorageBucket,
+                      bucket: bucket,
                     )
                         .ref()
                         .child('rooms')
@@ -382,6 +403,14 @@ class AdminHotelsPage extends StatelessWidget {
                       selectedImageBytes!,
                       SettableMetadata(contentType: 'image/jpeg'),
                     );
+
+                    uploadTask.snapshotEvents.listen((snapshot) {
+                      debugPrint(
+                        'Room upload: ${snapshot.bytesTransferred}/${snapshot.totalBytes} bytes',
+                      );
+                    }, onError: (error) {
+                      debugPrint('Room upload error: $error');
+                    });
                     
                     final snapshot = await uploadTask;
                     uploadedImageUrl = await snapshot.ref.getDownloadURL();

@@ -16,7 +16,7 @@ class AppConfig {
   static const String firebaseWebApiKey = 'AIzaSyB_NiQGefZpLUWOfN7MOncNfqyM8ZpruRA';
   static const String firebaseWebAuthDomain = 'hotelbookingapp-ebb89.firebaseapp.com';
   static const String firebaseWebProjectId = 'hotelbookingapp-ebb89';
-  static const String firebaseWebStorageBucket = 'hotelbookingapp-ebb89.appspot.com';
+  static const String firebaseWebStorageBucket = 'hotelbookingapp-ebb89.firebasestorage.app';
   static const String firebaseWebMessagingSenderId = '917502929168';
   static const String firebaseWebAppId = '1:917502929168:web:e6a3613253a63d23739d95';
 }

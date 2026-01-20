@@ -1,16 +1,46 @@
 import 'package:buscatelo/model/hotel_model.dart';
 import 'package:buscatelo/ui/pages/booking/booking_page.dart';
+import 'package:buscatelo/bloc/auth_bloc.dart';
+import 'package:buscatelo/bloc/hotel_bloc.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
-class HotelDetailPage extends StatelessWidget {
+class HotelDetailPage extends StatefulWidget {
   const HotelDetailPage(this.hotel, {Key? key}) : super(key: key);
 
   final HotelModel hotel;
 
   @override
+  State<HotelDetailPage> createState() => _HotelDetailPageState();
+}
+
+class _HotelDetailPageState extends State<HotelDetailPage> {
+  late List<Review> _reviews;
+  AuthBloc? _authBloc;
+
+  @override
+  void initState() {
+    super.initState();
+    _reviews = List<Review>.from(widget.hotel.reviews);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _authBloc ??= _safeAuthBloc(context);
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final galleryImages = <String>{hotel.imageUrl}
-      ..addAll(hotel.rooms.map((r) => r.imageUrl).where((url) => url.isNotEmpty));
+    final hotel = widget.hotel;
+    final galleryImages = <String>{
+      if (hotel.imageUrl.isNotEmpty) hotel.imageUrl,
+      ...hotel.rooms.map((r) => r.imageUrl).where((url) => url.isNotEmpty),
+    };
+    final heroTag = hotel.imageUrl.isNotEmpty
+        ? hotel.imageUrl
+        : 'hotel_${hotel.id}';
 
     return DefaultTabController(
       length: 3,
@@ -25,19 +55,26 @@ class HotelDetailPage extends StatelessWidget {
             GestureDetector(
               onTap: () => _showImageDialog(context, hotel.imageUrl),
               child: Hero(
-                tag: Key('key' + hotel.imageUrl),
-                child: Image.network(
-                  hotel.imageUrl,
-                  height: 260,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Image.asset(
-                    'assets/img/hotel1.jpg',
-                    height: 260,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                  ),
-                ),
+                tag: Key('key_$heroTag'),
+                child: hotel.imageUrl.isNotEmpty
+                    ? Image.network(
+                        hotel.imageUrl,
+                        height: 260,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Image.asset(
+                          'assets/img/hotel1.jpg',
+                          height: 260,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                        ),
+                      )
+                    : Image.asset(
+                        'assets/img/hotel1.jpg',
+                        height: 260,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                      ),
               ),
             ),
             
@@ -165,7 +202,7 @@ class HotelDetailPage extends StatelessWidget {
                   _buildRoomsTab(),
                   
                   // REVIEWS Tab
-                  _buildReviewsTab(),
+                  _buildReviewsTab(context),
                 ],
               ),
             ),
@@ -231,7 +268,7 @@ class HotelDetailPage extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            hotel.description,
+            widget.hotel.description,
             style: TextStyle(
               fontSize: 15,
               color: Colors.grey[700],
@@ -287,7 +324,7 @@ class HotelDetailPage extends StatelessWidget {
           Wrap(
             spacing: 8,
             runSpacing: 8,
-            children: hotel.amenities
+            children: widget.hotel.amenities
                 .map((amenity) => Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 16,
@@ -326,9 +363,9 @@ class HotelDetailPage extends StatelessWidget {
   Widget _buildRoomsTab() {
     return ListView.builder(
       padding: const EdgeInsets.all(16),
-      itemCount: hotel.rooms.length,
+      itemCount: widget.hotel.rooms.length,
       itemBuilder: (context, index) {
-        final room = hotel.rooms[index];
+        final room = widget.hotel.rooms[index];
         return Card(
           margin: const EdgeInsets.only(bottom: 16),
           shape: RoundedRectangleBorder(
@@ -410,100 +447,241 @@ class HotelDetailPage extends StatelessWidget {
     );
   }
 
-  Widget _buildReviewsTab() {
-    return hotel.reviews.isEmpty
-        ? Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.rate_review_outlined, size: 64, color: Colors.grey[400]),
-                const SizedBox(height: 16),
-                Text(
-                  'No reviews yet',
-                  style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+  AuthBloc? _safeAuthBloc(BuildContext context) {
+    try {
+      return context.read<AuthBloc>();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Widget _buildReviewsTab(BuildContext context) {
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+          child: Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  'Reviews',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
-              ],
-            ),
-          )
-        : ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: hotel.reviews.length,
-            itemBuilder: (context, index) {
-              final review = hotel.reviews[index];
-              return Card(
-                margin: const EdgeInsets.only(bottom: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
+              ),
+              ElevatedButton.icon(
+                onPressed: () => _showAddReviewDialog(context),
+                icon: const Icon(Icons.rate_review),
+                label: const Text('Add Review'),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: _reviews.isEmpty
+              ? Center(
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Row(
-                        children: [
-                          CircleAvatar(
-                            backgroundColor: Colors.blue.withOpacity(0.2),
-                            child: Text(
-                              review.user[0].toUpperCase(),
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: Colors.blue,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  review.user,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 16,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Row(
-                                  children: [
-                                    ...List.generate(
-                                      5,
-                                      (i) => Icon(
-                                        i < review.rate
-                                            ? Icons.star
-                                            : Icons.star_border,
-                                        size: 16,
-                                        color: Colors.amber,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
+                      Icon(Icons.rate_review_outlined,
+                          size: 64, color: Colors.grey[400]),
+                      const SizedBox(height: 16),
                       Text(
-                        review.message,
-                        style: TextStyle(
-                          color: Colors.grey[700],
-                          height: 1.4,
-                        ),
+                        'No reviews yet',
+                        style: TextStyle(fontSize: 16, color: Colors.grey[600]),
                       ),
                     ],
                   ),
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: _reviews.length,
+                  itemBuilder: (context, index) {
+                    final review = _reviews[index];
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                CircleAvatar(
+                                  backgroundColor: Colors.blue.withOpacity(0.2),
+                                  child: Text(
+                                    review.user.isNotEmpty
+                                        ? review.user[0].toUpperCase()
+                                        : 'U',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.blue,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        review.user,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Row(
+                                        children: [
+                                          ...List.generate(
+                                            5,
+                                            (i) => Icon(
+                                              i < review.rate
+                                                  ? Icons.star
+                                                  : Icons.star_border,
+                                              size: 16,
+                                              color: Colors.amber,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              review.message,
+                              style: TextStyle(
+                                color: Colors.grey[700],
+                                height: 1.4,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
                 ),
-              );
-            },
-          );
+        ),
+      ],
+    );
+  }
+
+    Future<void> _showAddReviewDialog(BuildContext context) async {
+    final authBloc = _authBloc ?? _safeAuthBloc(context);
+
+    if (widget.hotel.id.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Hotel ID not found.')),
+      );
+      return;
+    }
+
+    final messageController = TextEditingController();
+    int selectedRating = 5;
+
+    final submitted = await showDialog<bool>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Add Review'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(
+                  5,
+                  (i) => IconButton(
+                    icon: Icon(
+                      i < selectedRating ? Icons.star : Icons.star_border,
+                      color: Colors.amber,
+                    ),
+                    onPressed: () => setDialogState(() => selectedRating = i + 1),
+                  ),
+                ),
+              ),
+              TextField(
+                controller: messageController,
+                decoration: const InputDecoration(
+                  labelText: 'Review',
+                ),
+                maxLines: 3,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Submit'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (submitted != true) return;
+    final message = messageController.text.trim();
+    if (message.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter a review.')),
+      );
+      return;
+    }
+
+    final userName = (authBloc != null && authBloc.signedIn) 
+        ? authBloc.displayName 
+        : 'Guest';
+    final userImage = (authBloc != null && authBloc.signedIn) 
+        ? (authBloc.photoUrl ?? '') 
+        : '';
+
+    final reviewData = {
+      'message': message,
+      'user': userName,
+      'userImage': userImage,
+      'rate': selectedRating,
+    };
+
+    try {
+      await FirebaseFirestore.instance
+          .collection('hotels')
+          .doc(widget.hotel.id)
+          .update({
+        'reviews': FieldValue.arrayUnion([reviewData])
+      });
+
+      setState(() => _reviews.add(Review.fromJson(reviewData)));
+      
+      // Refresh the hotel list to show updated ratings
+      try {
+        final hotelBloc = context.read<HotelBloc>();
+        hotelBloc.retrieveHotels();
+      } catch (_) {}
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Review added.')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to add review: $e')),
+      );
+    }
   }
 
   double _rating(HotelModel hotel) {
-    if (hotel.reviews.isEmpty) return 0;
-    final total = hotel.reviews.fold<int>(0, (sum, r) => sum + r.rate);
-    return total / hotel.reviews.length;
+    if (_reviews.isEmpty) return 0;
+    final total = _reviews.fold<int>(0, (sum, r) => sum + r.rate);
+    return total / _reviews.length;
   }
 
   IconData _amenityIcon(String name) {
@@ -526,14 +704,19 @@ class HotelDetailPage extends StatelessWidget {
           children: [
             // Image
             InteractiveViewer(
-              child: Image.network(
-                imageUrl,
-                fit: BoxFit.contain,
-                errorBuilder: (_, __, ___) => Image.asset(
-                  'assets/img/hotel1.jpg',
-                  fit: BoxFit.contain,
-                ),
-              ),
+              child: imageUrl.isNotEmpty
+                  ? Image.network(
+                      imageUrl,
+                      fit: BoxFit.contain,
+                      errorBuilder: (_, __, ___) => Image.asset(
+                        'assets/img/hotel1.jpg',
+                        fit: BoxFit.contain,
+                      ),
+                    )
+                  : Image.asset(
+                      'assets/img/hotel1.jpg',
+                      fit: BoxFit.contain,
+                    ),
             ),
             // Close button
             Positioned(

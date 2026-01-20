@@ -1,6 +1,6 @@
 {
-    "name": "buscatelo",
-    "short_name": "buscatelo",
+    "name": "HotelEase",
+    "short_name": "HotelEase",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

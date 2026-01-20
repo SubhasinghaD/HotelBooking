@@ -43,4 +43,10 @@ flutter:
     - assets/img/logo.png
     - assets/img/home.jpg
     - assets/img/hotel1.jpg
+    - assets/img/hotel2.jpg
+    - assets/img/hotel3.jpg
+    - assets/img/room1.jpg
+    - assets/img/room2.jpg
+    - assets/img/room3.jpg
+    - assets/img/room4.jpg
     - server/hotels.json

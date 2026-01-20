@@ -15,32 +15,51 @@ import 'package:provider/provider.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
-  // Initialize Firebase
+
+  var firebaseReady = false;
   if (AppConfig.useFirebase) {
-    if (!kIsWeb) {
+    if (kIsWeb) {
+      final hasWebConfig = AppConfig.firebaseWebApiKey.isNotEmpty &&
+          AppConfig.firebaseWebAppId.isNotEmpty &&
+          AppConfig.firebaseWebProjectId.isNotEmpty;
+      if (hasWebConfig) {
+        await Firebase.initializeApp(
+          options: FirebaseOptions(
+            apiKey: AppConfig.firebaseWebApiKey,
+            authDomain: AppConfig.firebaseWebAuthDomain,
+            projectId: AppConfig.firebaseWebProjectId,
+            storageBucket: AppConfig.firebaseWebStorageBucket,
+            messagingSenderId: AppConfig.firebaseWebMessagingSenderId,
+            appId: AppConfig.firebaseWebAppId,
+          ),
+        );
+        firebaseReady = true;
+      }
+    } else {
       await Firebase.initializeApp();
+      firebaseReady = true;
     }
   }
-  
-  // Initialize Stripe
+
   if (!kIsWeb &&
       AppConfig.enablePayments &&
       AppConfig.stripePublishableKey.isNotEmpty) {
     Stripe.publishableKey = AppConfig.stripePublishableKey;
   }
-  
+
   FlutterError.onError = (FlutterErrorDetails details) {
     FlutterError.dumpErrorToConsole(details);
     if (kReleaseMode) exitApp(1);
   };
   ErrorWidget.builder = (FlutterErrorDetails details) => CustomErrorWidget();
-  runApp(const MyApp());
+  runApp(MyApp(firebaseReady: firebaseReady));
 }
 
 class MyApp extends StatelessWidget {
   // This widget is the root of your application.
-  const MyApp({Key? key}) : super(key: key);
+  const MyApp({Key? key, required this.firebaseReady}) : super(key: key);
+
+  final bool firebaseReady;
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -59,7 +78,7 @@ class MyApp extends StatelessWidget {
           ChangeNotifierProvider(create: (_) => HotelBloc()..retrieveHotels()),
           ChangeNotifierProvider(create: (_) => FavoritesBloc()),
           ChangeNotifierProvider(create: (_) => BookingBloc()),
-          ChangeNotifierProvider(create: (_) => AuthBloc()),
+          ChangeNotifierProvider(create: (_) => AuthBloc(firebaseReady: firebaseReady)),
         ],
         child: const HomeShell(),
       ),

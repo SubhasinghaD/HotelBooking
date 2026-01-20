@@ -79,17 +79,32 @@ class HotelModel {
 class Room {
   String imageUrl;
   String name;
+  String description;
+  int sleeps;
+  double price;
 
-  Room({this.imageUrl = '', this.name = ''});
+  Room({
+    this.imageUrl = '', 
+    this.name = '',
+    this.description = '',
+    this.sleeps = 0,
+    this.price = 0.0,
+  });
 
   Room.fromJson(Map<String, dynamic> json)
       : imageUrl = json['imageUrl'] ?? '',
-        name = json['name'] ?? '';
+        name = json['name'] ?? '',
+        description = json['description'] ?? '',
+        sleeps = json['sleeps'] ?? 0,
+        price = (json['price'] ?? 0).toDouble();
 
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};
     data['imageUrl'] = imageUrl;
     data['name'] = name;
+    data['description'] = description;
+    data['sleeps'] = sleeps;
+    data['price'] = price;
     return data;
   }
 }

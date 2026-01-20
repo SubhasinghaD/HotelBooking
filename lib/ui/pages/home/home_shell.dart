@@ -1,8 +1,10 @@
-import 'package:buscatelo/ui/pages/favorites/favorites_page.dart';
+import 'package:buscatelo/bloc/auth_bloc.dart';
+import 'package:buscatelo/ui/pages/auth/login_page.dart';
 import 'package:buscatelo/ui/pages/hotel_search/home_page.dart';
 import 'package:buscatelo/ui/pages/profile/profile_page.dart';
 import 'package:buscatelo/ui/pages/bookings/bookings_page.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 class HomeShell extends StatefulWidget {
   const HomeShell({Key? key}) : super(key: key);
@@ -16,21 +18,23 @@ class _HomeShellState extends State<HomeShell> {
 
   final List<Widget> _pages = const [
     HotelSearchPage(),
-    FavoritesPage(),
     BookingsPage(),
     ProfilePage(),
   ];
 
   @override
   Widget build(BuildContext context) {
+    final authBloc = context.watch<AuthBloc>();
+    if (!authBloc.signedIn) {
+      return const LoginPage();
+    }
     return Scaffold(
       body: IndexedStack(index: _index, children: _pages),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _index,
         onTap: (value) => setState(() => _index = value),
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Search'),
-          BottomNavigationBarItem(icon: Icon(Icons.favorite), label: 'Favorites'),
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
           BottomNavigationBarItem(icon: Icon(Icons.book), label: 'Bookings'),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
         ],

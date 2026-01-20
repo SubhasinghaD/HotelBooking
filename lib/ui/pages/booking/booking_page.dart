@@ -2,6 +2,7 @@ import 'package:buscatelo/bloc/booking_bloc.dart';
 import 'package:buscatelo/data/network/payment_api.dart';
 import 'package:buscatelo/model/booking_model.dart';
 import 'package:buscatelo/model/hotel_model.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
 import 'package:intl/intl.dart';
@@ -17,16 +18,19 @@ class BookingPage extends StatefulWidget {
 }
 
 class _BookingPageState extends State<BookingPage> {
-  DateTimeRange? _dateRange;
+  DateTime? _checkInDate;
+  DateTime? _checkOutDate;
   int _guests = 2;
   Room? _selectedRoom;
 
   int get _totalPrice {
-    final nights = _dateRange == null
+    final nights = _checkInDate == null || _checkOutDate == null
         ? 1
-        : _dateRange!.duration.inDays.clamp(1, 365);
+        : _checkOutDate!.difference(_checkInDate!).inDays.clamp(1, 365);
     return widget.hotel.price * nights;
   }
+
+  bool get _datesSelected => _checkInDate != null && _checkOutDate != null;
 
   @override
   Widget build(BuildContext context) {
@@ -40,23 +44,53 @@ class _BookingPageState extends State<BookingPage> {
           Text(hotel.name, style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 12),
           ListTile(
-            title: const Text('Dates'),
+            title: const Text('Check-in Date'),
             subtitle: Text(
-              _dateRange == null
-                  ? 'Select check-in and check-out'
-                  : '${DateFormat.yMMMd().format(_dateRange!.start)} - ${DateFormat.yMMMd().format(_dateRange!.end)}',
+              _checkInDate == null
+                  ? 'Select check-in date'
+                  : DateFormat.yMMMd().format(_checkInDate!),
             ),
-            trailing: const Icon(Icons.date_range),
+            trailing: const Icon(Icons.calendar_today),
             onTap: () async {
-              final picked = await showDateRangePicker(
+              final picked = await showDatePicker(
                 context: context,
+                initialDate: _checkInDate ?? DateTime.now(),
                 firstDate: DateTime.now(),
                 lastDate: DateTime.now().add(const Duration(days: 365)),
               );
               if (picked != null) {
-                setState(() => _dateRange = picked);
+                setState(() {
+                  _checkInDate = picked;
+                  // Reset checkout if it's before new check-in
+                  if (_checkOutDate != null && _checkOutDate!.isBefore(picked)) {
+                    _checkOutDate = null;
+                  }
+                });
               }
             },
+          ),
+          const SizedBox(height: 8),
+          ListTile(
+            title: const Text('Check-out Date'),
+            subtitle: Text(
+              _checkOutDate == null
+                  ? 'Select check-out date'
+                  : DateFormat.yMMMd().format(_checkOutDate!),
+            ),
+            trailing: const Icon(Icons.calendar_today),
+            onTap: _checkInDate == null
+                ? null
+                : () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: _checkOutDate ?? _checkInDate!.add(const Duration(days: 1)),
+                      firstDate: _checkInDate!.add(const Duration(days: 1)),
+                      lastDate: DateTime.now().add(const Duration(days: 365)),
+                    );
+                    if (picked != null) {
+                      setState(() => _checkOutDate = picked);
+                    }
+                  },
           ),
           const SizedBox(height: 8),
           ListTile(
@@ -95,14 +129,14 @@ class _BookingPageState extends State<BookingPage> {
           const SizedBox(height: 24),
           ListTile(
             title: const Text('Total'),
-            trailing: Text('S/ $_totalPrice',
+            trailing: Text('LKR $_totalPrice',
                 style: const TextStyle(fontWeight: FontWeight.bold)),
           ),
           const SizedBox(height: 12),
           ElevatedButton.icon(
             icon: const Icon(Icons.check),
             label: const Text('Confirm booking'),
-            onPressed: _selectedRoom == null || _dateRange == null
+            onPressed: _selectedRoom == null || !_datesSelected
                 ? null
                 : () => _confirmBooking(context),
           ),
@@ -110,7 +144,7 @@ class _BookingPageState extends State<BookingPage> {
           OutlinedButton.icon(
             icon: const Icon(Icons.payment),
             label: const Text('Pay with Stripe'),
-            onPressed: _selectedRoom == null || _dateRange == null
+            onPressed: _selectedRoom == null || !_datesSelected
                 ? null
                 : () => _payWithStripe(context),
           ),
@@ -119,27 +153,63 @@ class _BookingPageState extends State<BookingPage> {
     );
   }
 
-  void _confirmBooking(BuildContext context) {
-    final bookingBloc = context.read<BookingBloc>();
+  void _confirmBooking(BuildContext context) async {
     final booking = BookingModel(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       hotelId: widget.hotel.id,
       hotelName: widget.hotel.name,
       roomName: _selectedRoom!.name,
-      checkIn: _dateRange!.start,
-      checkOut: _dateRange!.end,
+      checkIn: _checkInDate!,
+      checkOut: _checkOutDate!,
       guests: _guests,
       totalPrice: _totalPrice,
       status: 'confirmed',
     );
 
-    bookingBloc.addBooking(booking);
+    try {
+      // Show loading
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => const Center(child: CircularProgressIndicator()),
+      );
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Booking confirmed (email queued)')),
-    );
+      // Save directly to Firebase
+      await FirebaseFirestore.instance
+          .collection('bookings')
+          .doc(booking.id)
+          .set(booking.toJson());
 
-    Navigator.pop(context);
+      // Close loading
+      if (context.mounted) Navigator.pop(context);
+
+      // Show success
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Booking confirmed and saved!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+
+        Navigator.pop(context, true); // Return true to indicate success
+      }
+    } catch (e) {
+      // Close loading if still open
+      if (context.mounted && Navigator.canPop(context)) {
+        Navigator.pop(context);
+      }
+
+      // Show error
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to save booking: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   void _showPaymentNotConfigured(BuildContext context) {
@@ -195,15 +265,34 @@ class _BookingPageState extends State<BookingPage> {
       // Present payment sheet
       await Stripe.instance.presentPaymentSheet();
 
-      // Payment successful
+      // Payment successful - save booking with 'paid' status
       if (context.mounted) {
-        _confirmBooking(context);
+        final booking = BookingModel(
+          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          hotelId: widget.hotel.id,
+          hotelName: widget.hotel.name,
+          roomName: _selectedRoom!.name,
+          checkIn: _checkInDate!,
+          checkOut: _checkOutDate!,
+          guests: _guests,
+          totalPrice: _totalPrice,
+          status: 'paid',
+        );
+
+        // Save directly to Firebase
+        await FirebaseFirestore.instance
+            .collection('bookings')
+            .doc(booking.id)
+            .set(booking.toJson());
+
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Payment successful! Booking confirmed.'),
             backgroundColor: Colors.green,
           ),
         );
+
+        Navigator.pop(context, true); // Return true to indicate success
       }
     } catch (e) {
       // Close loading if still open

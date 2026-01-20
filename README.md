@@ -1,30 +1,59 @@
-# Hotel Booking App
+# 🏨 Hotel Booking App
 
+<div align="center">
 
+![Hotel Booking App](https://cdn.dribbble.com/users/443226/screenshots/6111374/hotel_app_exploration_4x.jpg)
 
-## System requirements
-To install and run Flutter, your development environment must meet these minimum requirements:
+A modern, feature-rich hotel booking application built with Flutter, featuring real-time bookings, Firebase authentication, Stripe payments, and Google Maps integration.
 
-- Operating Systems: ```Windows 7 SP1 or later (64-bit)```
+[![Flutter](https://img.shields.io/badge/Flutter-02569B?style=for-the-badge&logo=flutter&logoColor=white)](https://flutter.dev/)
+[![Firebase](https://img.shields.io/badge/Firebase-FFCA28?style=for-the-badge&logo=firebase&logoColor=black)](https://firebase.google.com/)
+[![Stripe](https://img.shields.io/badge/Stripe-008CDD?style=for-the-badge&logo=stripe&logoColor=white)](https://stripe.com/)
 
-- Disk Space: ```400 MB (does not include disk space for IDE/tools).```
+</div>
 
-- Tools: Flutter depends on these tools being available in your environment.
+## ✨ Features
 
-- [Windows PowerShell 5.0](https://docs.microsoft.com/es-es/powershell/scripting/install/installing-windows-powershell?view=powershell-6) or newer (this is pre-installed with Windows 10)
+- 🔐 **User Authentication** - Firebase Auth with Google Sign-In support
+- 🏨 **Hotel Discovery** - Browse and search hotels with detailed information
+- ⭐ **Favorites System** - Save your favorite hotels for quick access
+- 💳 **Secure Payments** - Integrated Stripe payment processing
+- 🗺️ **Google Maps Integration** - View hotel locations on interactive maps
+- 📱 **Cross-Platform** - Runs on Android, iOS, and Web
+- 🎨 **Modern UI/UX** - Clean and intuitive user interface
+- 🔄 **State Management** - Provider pattern with BLoC architecture
+- 💾 **Local Storage** - Persistent data with SharedPreferences
+- 📷 **Image Handling** - Upload and manage hotel images
 
-- [Git for Windows 2.x](https://git-scm.com/download/win), with the Use Git from the Windows Command Prompt option.
+## 🛠️ Tech Stack
 
-### Requirements:
-- [Download the last version of Android Studio SDK](https://developer.android.com/studio)
-- [Download and Install Flutter SDK](https://flutter.dev/docs/get-started/install)
-- Install the plugin ```Flutter``` and ```Dart``` for VS Code or ```Flutter``` in Android Studio.
+- **Framework:** Flutter SDK (2.12.0+)
+- **State Management:** Provider + BLoC Pattern
+- **Backend Services:** Firebase (Auth, Firestore, Storage)
+- **Payment Gateway:** Stripe
+- **Maps:** Google Maps Flutter
+- **Navigation:** GoRouter
+- **HTTP Client:** http package
+- **Local Storage:** SharedPreferences
 
+## 📋 Prerequisites
 
-### Run on the project folder:
+Before you begin, ensure you have the following installed:
 
-- Check if the branch is ```origin/develop``` .
-- Then run in terminal ```flutter packages get``` .
-- If you don't want to emulate the sdk in your computer, you need to connect your mobile phone. Here you can find a tutorial for this [Run on your phone](https://www.youtube.com/watch?v=NIp7yGxf30I).
-- After that run with ```F5``` if you use Visual studio code or run with the ```button play``` in Android Studio.
+- **Operating System:** Windows 7 SP1 or later (64-bit), macOS, or Linux
+- **Disk Space:** 400 MB minimum (excluding IDE/tools)
+- **Flutter SDK:** [Download and install Flutter](https://flutter.dev/docs/get-started/install)
+- **Android Studio** or **VS Code** with Flutter & Dart plugins
+- **Git:** [Git for Windows](https://git-scm.com/download/win) or equivalent
+- **Node.js:** v14+ (for backend server)
+- **Firebase Account:** For authentication and database
+- **Stripe Account:** For payment processing
+- **Google Cloud Account:** For Maps API
 
+## 🚀 Getting Started
+
+### 1. Clone the Repository
+
+```bash
+git clone https://github.com/yourusername/hotel-booking-app.git
+cd hotel-booking-app
